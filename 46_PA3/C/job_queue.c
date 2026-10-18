@@ -13,11 +13,20 @@ int queue_init(job_queue_t *q)
     q->count = 0;
     q->shutdown = 0;
 
-    /* TODO C3:
-     * Initialize q->mutex, q->not_empty, and q->not_full.
-     * If an initialization fails, clean up anything already initialized
-     * and return -1. Return 0 on success.
-     */
+    if (pthread_mutex_init(&q->mutex, NULL) != 0) {
+        return -1;
+    }
+
+    if (pthread_cond_init(&q->not_empty, NULL) != 0) {
+        pthread_mutex_destroy(&q->mutex);
+        return -1;
+    }
+
+    if (pthread_cond_init(&q->not_full, NULL) != 0) {
+        pthread_cond_destroy(&q->not_empty);
+        pthread_mutex_destroy(&q->mutex);
+        return -1;
+    }
 
     return 0;
 }
@@ -28,7 +37,9 @@ void queue_destroy(job_queue_t *q)
         return;
     }
 
-    /* TODO C4: destroy the mutex and both condition variables. */
+    pthread_cond_destroy(&q->not_full);
+    pthread_cond_destroy(&q->not_empty);
+    pthread_mutex_destroy(&q->mutex);
 }
 
 int queue_push(job_queue_t *q, int job)
@@ -37,19 +48,26 @@ int queue_push(job_queue_t *q, int job)
         return -1;
     }
 
-    /* TODO C5-C7:
-     * 1. Lock q->mutex.
-     * 2. While the queue is full and shutdown is false, wait on not_full.
-     * 3. If shutdown is set, unlock and return -1.
-     * 4. Insert job at tail, advance tail circularly, increment count.
-     * 5. Signal a consumer through not_empty.
-     * 6. Unlock and return 0.
-     *
-     * IMPORTANT: pthread_cond_wait() must be guarded by a while loop.
-     */
+    pthread_mutex_lock(&q->mutex);
 
-    (void)job;
-    return -1;
+    while (q->count == QUEUE_CAPACITY && !q->shutdown) {
+        pthread_cond_wait(&q->not_full, &q->mutex);
+    }
+
+    if (q->shutdown) {
+        pthread_mutex_unlock(&q->mutex);
+        return -1;
+    }
+
+    q->jobs[q->tail] = job;
+    q->tail = (q->tail + 1) % QUEUE_CAPACITY;
+    q->count++;
+
+    pthread_cond_signal(&q->not_empty);
+
+    pthread_mutex_unlock(&q->mutex);
+
+    return 0;
 }
 
 int queue_pop(job_queue_t *q, int *job)
@@ -58,16 +76,26 @@ int queue_pop(job_queue_t *q, int *job)
         return 0;
     }
 
-    /* TODO C8-C10:
-     * 1. Lock q->mutex.
-     * 2. While the queue is empty and shutdown is false, wait on not_empty.
-     * 3. If queue is empty AND shutdown is true, unlock and return 0.
-     * 4. Remove the job at head, advance head circularly, decrement count.
-     * 5. Signal a producer through not_full.
-     * 6. Unlock and return 1.
-     */
+    pthread_mutex_lock(&q->mutex);
 
-    return 0;
+    while (q->count == 0 && !q->shutdown) {
+        pthread_cond_wait(&q->not_empty, &q->mutex);
+    }
+
+    if (q->count == 0 && q->shutdown) {
+        pthread_mutex_unlock(&q->mutex);
+        return 0;
+    }
+
+    *job = q->jobs[q->head];
+    q->head = (q->head + 1) % QUEUE_CAPACITY;
+    q->count--;
+
+    pthread_cond_signal(&q->not_full);
+
+    pthread_mutex_unlock(&q->mutex);
+
+    return 1;
 }
 
 void queue_shutdown(job_queue_t *q)
@@ -75,14 +103,14 @@ void queue_shutdown(job_queue_t *q)
     if (q == NULL) {
         return;
     }
+    
+    pthread_mutex_lock(&q->mutex);
 
-    /* TODO C11-C12:
-     * 1. Lock q->mutex.
-     * 2. Set q->shutdown = 1.
-     * 3. Wake ALL consumers sleeping on not_empty.
-     * 4. Unlock q->mutex.
-     *
-     * Explain in answers.txt why broadcast(), rather than signal(),
-     * is appropriate during shutdown.
-     */
+    q->shutdown = 1;
+
+    pthread_cond_broadcast(&q->not_empty);
+
+    pthread_cond_broadcast(&q->not_full);
+
+    pthread_mutex_unlock(&q->mutex);
 }
