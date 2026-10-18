@@ -22,16 +22,11 @@ static void *counter_worker(void *arg)
 
     for (long i = 0; i < w->iterations; i++) {
         if (w->use_mutex) {
-            /* TODO C1: lock counter_mutex. */
             pthread_mutex_lock(&counter_mutex);
         }
-        /* TODO B1: increment total_jobs exactly once per iteration.
-         * In unsafe mode this increment is intentionally unsynchronized.
-         */
         total_jobs++;
 
         if (w->use_mutex) {
-            /* TODO C2: unlock counter_mutex. */
             pthread_mutex_unlock(&counter_mutex);
         }
     }
@@ -71,11 +66,6 @@ int main(int argc, char *argv[])
     worker_arg_t args[MAX_THREADS];
 
     total_jobs = 0;
-
-    /* TODO B2:
-     * Initialize args[i] and create nthreads workers using pthread_create().
-     * On failure, print an error and exit.
-     */
     long created = 0;
     
     for (long i = 0; i < nthreads; i++) {
@@ -96,10 +86,6 @@ int main(int argc, char *argv[])
 
     created++;
 }
-
-    /* TODO B3:
-     * Join all created workers using pthread_join().
-     */
 
     for (long i = 0; i < created; i++) {
         int rc = pthread_join(threads[i], NULL);
