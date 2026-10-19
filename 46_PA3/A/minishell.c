@@ -62,12 +62,12 @@ int main(void)
         fflush(stdout);
 
         if (fgets(line, sizeof(line), stdin) == NULL) {
-            /* EOF (Ctrl-D or end of redirected input) exits the shell. */
             putchar('\n');
             break;
         }
 
         int argc = parse_command(line, args);
+
         if (argc == 0) {
             continue;
         }
@@ -82,10 +82,8 @@ int main(void)
             } else if (chdir(args[1]) != 0) {
                 perror("cd");
             }
-            continue;   /* don't fall through to execute_external() */
+            continue;
         }
-           
-        
 
         execute_external(args);
     }
