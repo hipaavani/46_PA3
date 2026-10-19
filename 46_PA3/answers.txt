@@ -1,6 +1,7 @@
 Programming Assignment: Processes, Threads, and Synchronization
-Name:
-Roll number:
+Group Number: 46
+Group Members: Pavani Sharma (2025369), Paavani Sethis (2025611)
+
 
 A-Q1. Why should execvp() normally be called in the child rather than the shell process?
 
