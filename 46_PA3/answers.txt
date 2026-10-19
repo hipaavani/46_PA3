@@ -4,9 +4,11 @@ Group Members: Pavani Sharma (2025369), Paavani Sethis (2025611)
 
 
 A-Q1. Why should execvp() normally be called in the child rather than the shell process?
+Answer: execvp() should normally be invoked by the child process since exec replaces the current process with a new one. If the shell itself calls execvp(), it will be replaced by the requested process and will no longer be able to accept new commands. Hence, shell uses fork() to create a child process, the child calls execvp() to execute the requested process, and then the parent shell waits for the child to finish using waitpid() and then displays the prompt on the shell again. 
 
 
 A-Q2. Why must cd be implemented by the shell process itself rather than by a forked child?
+Answer: cd must be implemented by the shell process itself, since the command changes the current working directory of the calling process. If it is executed in a forked child, only the child’s working directory changes, leaving the parent shell’s working directory unchanged.
 
 
 A-Q3. What problem can arise if the parent never waits for terminated child processes?
