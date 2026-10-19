@@ -27,9 +27,17 @@ If two threads execute total_jobs++ concurrently, they may both read the same in
 
 
 B-Q2. Give an interleaving of two threads that loses one increment.
+Answer: Initially, total_jobs = 0. Consider two threads, T1 and T2, executing total_jobs++ concurrently.
+The following interleaving causes a lost update:
+1) T1 reads total_jobs = 0.
+2)T2 reads total_jobs = 0.
+3) T1 increments the value and writes 1 to total_jobs.
+4) T2 increments its previously read value and also writes 1 to total_jobs.
+Thus, the final value of total_jobs is 1 instead of 2. One increment is lost because both threads read the same initial value, and the second thread overwrites the first thread's update. This occurs because total_jobs++ is not an atomic operation.
 
 
 B-Q3. Why can the unsafe program sometimes appear to produce the expected result?
+Answer: The unsafe program may sometimes produce the expected result because the threads might execute their operations one after another without interfering with each other. In such cases, each increment is completed before the next begins, so no update is lost. However, the result depends on the timing and scheduling of the threads, so the program is unreliable and may produce incorrect results during other executions.
 
 
 C-Q1. Why must queue head, tail, and count be protected by the same mutex?
@@ -47,7 +55,7 @@ C-Q4. Why is pthread_cond_broadcast() appropriate during queue shutdown?
 C-Q5. Why is a condition variable preferable to busy waiting when the queue is empty for a long time?
 
 
-C-Q6. Why can per-worker jobs_completed counters reduce synchronization overhead compared with one shared global counter?
+C-Q6. Why can per-worker jobs_completed counters reduce synchronisation overhead compared with one shared global counter?
 
 
 BONUS-Q. If you attempt the bonus, explain why queue_shutdown() must occur only after ALL producer threads have terminated.
