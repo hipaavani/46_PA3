@@ -22,8 +22,7 @@ Answer: total_jobs++ consists of three steps:
 3) Store: it writes the updated value back into memory. 
 
 An indivisible operation is such that it occurs completely in one single step, without being 
-Interrupted by another thread. Total_jobs++ is not an indivisible operation, since the three steps may not be executed as a single step. 
-If two threads execute total_jobs++ concurrently, they may both read the same initial value and increment it independently, and when both threads write back their results, one increment may be lost, leading to a race condition.
+Interrupted by another thread. Total_jobs++ is not an indivisible operation, since the three steps may not be executed as a single step. If two threads execute total_jobs++ concurrently, they can both read the same initial value and increment it independently. Hence when both threads write back their results, one increment may be lost, leading to a race condition.
 
 
 B-Q2. Give an interleaving of two threads that loses one increment.
@@ -37,25 +36,28 @@ Thus, the final value of total_jobs is 1 instead of 2. One increment is lost bec
 
 
 B-Q3. Why can the unsafe program sometimes appear to produce the expected result?
-Answer: The unsafe program may sometimes produce the expected result because the threads might execute their operations one after another without interfering with each other. In such cases, each increment is completed before the next begins, so no update is lost. However, the result depends on the timing and scheduling of the threads, so the program is unreliable and may produce incorrect results during other executions.
+An unsafe program can sometimes appear to even then produce the expected result because the threads might execute their operations one after another, with no interference from each other. As each increment is completed before the next occurs in this case, no update is lost. However the result can also depend on the timing and scheduling of the threads, and thus the program cannot be deemed reliable as it can produce incorrect results during other executions.
 
 
 C-Q1. Why must queue head, tail, and count be protected by the same mutex?
-
+The same mutex protects queue’s head, tail and count as multiple threads access these shared variables. Modification of the shared data by two or more threads concurrently can cause incorrect queue operations(overwriting or incorrectly tracking the number of jobs in the queue). Using the same mutex ensures correctness of the queue as only one thread will be able to modify these variables at a time.
 
 C-Q2. Why must releasing the mutex and sleeping in pthread_cond_wait() behave atomically?
-
+Answer: Releasing the mutex and sleeping in pthread_cond_wait() must behave atomically to prevent a thread from missing a signal from another thread. If the mutex is released before the thread starts waiting, another thread may change the queue state and signal the condition variable before the first thread begins waiting. This can cause the first thread to wait even when the condition it needs has already become true. 
 
 C-Q3. Why must the condition around pthread_cond_wait() be checked with while rather than if?
-
+Answer: The condition around pthread_cond_wait() must be checked using while rather than if because a thread may wake up even when the required condition is still not satisfied. For example, a consumer may wake up when the queue is still empty. Using while ensures that the condition is checked again after waking up and the thread waits again if necessary.
 
 C-Q4. Why is pthread_cond_broadcast() appropriate during queue shutdown?
+Answer: pthread_cond_broadcast() is appropriate during queue shutdown because multiple threads may be waiting on the condition variables. When the queue is shut down, all waiting threads must be woken up so they can check the shutdown condition and exit or stop submitting jobs as required. Broadcasting ensures that all waiting threads are notified instead of only one thread. 
 
 
 C-Q5. Why is a condition variable preferable to busy waiting when the queue is empty for a long time?
-
+Answer: A condition variable is preferable to busy waiting because a thread can sleep while waiting for the queue to become non-empty instead of continuously checking the queue. This prevents wasting CPU time when no jobs are available and when a job is added, the condition variable wakes up a waiting thread so it can continue execution.
 
 C-Q6. Why can per-worker jobs_completed counters reduce synchronisation overhead compared with one shared global counter?
+Answer: Per-worker jobs_completed counters reduce synchronisation overhead as each printer thread updates its own counter, avoiding the need for a mutex to protect a shared counter for every increment which would occur if multiple threads were modifying the same shared counter. The main thread adds the individual counters of all printer threads once they have finished to calculate the total number of completed jobs.
 
 
 BONUS-Q. If you attempt the bonus, explain why queue_shutdown() must occur only after ALL producer threads have terminated.
+Answer: queue_shutdown() must occur only after all producer threads have terminated because producers must be allowed to submit all their jobs before the queue is shut down. If the queue is shut down while producers are still running, queue_push() will fail for further submissions, and some jobs may not be submitted. Therefore, the main thread must join all producer threads before calling queue_shutdown(), ensuring that all producers have finished submitting their jobs before the printer threads are shut down. 
