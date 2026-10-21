@@ -50,7 +50,7 @@ static void *producer_worker(void *arg)
     producer_arg_t *p = (producer_arg_t *)arg;
 
     for (long j = 1; j <= p->jobs_to_submit; j++) {
-        long job_id = (long)p->id * p->jobs_to_submit + j;
+        long job_id = (p->id - 1L) * p->jobs_to_submit + j;
 
         if (queue_push(p->queue, (int)job_id) != 0) {
             fprintf(stderr, "Producer %d failed to submit job %ld\n",
@@ -230,7 +230,7 @@ static int run_bonus_server(long producers, long jobs_per_producer)
 
     if (!failed) {
         for (long i = 0; i < producers; i++) {
-            producer_args[i].id = (int)i;
+            producer_args[i].id = (int)(i + 1);
             producer_args[i].queue = &queue;
             producer_args[i].jobs_to_submit = jobs_per_producer;
             producer_args[i].jobs_submitted = 0;
